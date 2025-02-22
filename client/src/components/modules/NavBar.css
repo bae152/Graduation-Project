@@ -1,0 +1,58 @@
+.NavBar-container {
+  display: flex; /* 使用 Flexbox 布局 */
+  justify-content: space-between; /* 将子元素分布在两端 */
+  align-items: center; /* 垂直居中对齐 */
+  padding: 10px 20px; /* 内边距 */
+  background-color: #f2e6d6; /* 背景颜色，淡米色或浅粉色 */
+}
+
+.NavBar-left {
+  display: flex; /* 使用 Flexbox 使标题和链接容器水平排列 */
+  align-items: center; /* 垂直居中对齐 */
+}
+
+.NavBar-title {
+  font-size: 24px; /* 设置标题的字体大小 */
+  font-weight: bold; /* 加粗 */
+  color: #9e6b6d; /* 文字颜色，类似深红色 */
+  text-decoration: none; /* 去除链接的下划线 */
+  margin-right: 20px; /* 标题和链接之间的间距 */
+}
+
+.NavBar-linkContainer {
+  display: inline-block; /* 使用 Flexbox 使链接容器水平排列 */
+}
+
+.NavBar-link {
+  font-size: 16px; /* 设置链接的字体大小 */
+  color: #9e6b6d; /* 文字颜色，类似深红色 */
+  margin: 0 15px; /* 设置链接之间的水平间距 */
+  text-decoration: none; /* 去除链接的下划线 */
+}
+
+.NavBar-title:hover,
+.NavBar-link:hover,
+.NavBar-button:hover {
+  color: #7b4a48; /* 悬停时改变颜色 */
+}
+
+.NavBar-right {
+  display: flex; /* 使用 Flexbox 使右侧内容水平排列 */
+  align-items: center; /* 垂直居中对齐 */
+}
+
+.NavBar-button {
+  padding: 8px 20px; /* 按钮内边距 */
+  background-color: #9e6b6d; /* 按钮背景颜色 */
+  color: white; /* 按钮文字颜色 */
+  font-size: 14px; /* 按钮文字大小 */
+  font-weight: bold; /* 按钮文字加粗 */
+  border: none; /* 去除按钮边框 */
+  border-radius: 25px; /* 圆角按钮 */
+  cursor: pointer; /* 鼠标悬停时变为点击手势 */
+  transition: background-color 0.3s ease; /* 按钮背景颜色平滑过渡 */
+}
+
+.NavBar-button:focus {
+  outline: none; /* 去除焦点时的轮廓 */
+}
