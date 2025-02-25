@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-
 import { post } from "../../utilities.js";
 import "./Parameter.css";
 
@@ -14,41 +13,55 @@ const Parameter = (props) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    await new Promise((resolve) => setTimeout(resolve, 2000)); // 模拟网络延迟
-    if (nodeCount <= 100) {
-      setDownloadUrl(`http://localhost:3000/downloads/second-${nodeCount}-0.pcap`);
-      setError("");
+    if (nodeCount < 1 || nodeCount > 1000) {
+      setError("节点数必须在1-1000之间");
       return;
     }
+
     try {
+      // 显示加载状态（可选）
+      setError("");
+      setDownloadUrl("");
+
+      // 发送参数到后端API
       const response = await post("/api/parameter", { nodeCount });
 
-      setDownloadUrl(response.url);
-    } catch (error) {
-      console.error("完整错误信息:", error); // 显示完整错误
-      setError("无法启动仿真: " + (error.message || "未知错误"));
+      // 检查响应有效性
+      if (!response || !response.downloadUrl) {
+        throw new Error("无效响应");
+      }
+      setDownloadUrl(response.downloadUrl);
+    } catch (err) {
+      console.error("完整错误日志:", err);
+      setError(`仿真失败: ${err.message || "未知错误"}`);
     }
   };
 
   return (
     <>
-      <h2>输入节点数量</h2>
+      <h2>水下传感器网络配置</h2>
       <form onSubmit={handleSubmit}>
-        <input
-          /* type="number"*/
-          value={nodeCount}
-          onChange={handleNodeCountChange}
-          placeholder="节点数"
-          min="1"
-        />
+        <div className="input-group">
+          <label htmlFor="nodeCount">节点数量:</label>
+          <input
+            type="number"
+            id="nodeCount"
+            value={nodeCount}
+            onChange={handleNodeCountChange}
+            min="1"
+            max="1000"
+            required
+          />
+        </div>
         <button type="submit">启动仿真</button>
       </form>
-      {error && <p>{error}</p>}
+
+      {error && <div className="error-message">{error}</div>}
       {downloadUrl && (
-        <div>
-          <p>仿真完成！</p>
-          <a href={downloadUrl} download="simulation.pcap">
-            点击下载 second-{nodeCount}-0.pcap 文件
+        <div className="success-message">
+          <p>仿真已完成！</p>
+          <a href={downloadUrl} download={`simulation-node${nodeCount}.pcap`}>
+            <button>下载 PCAP 文件</button>
           </a>
         </div>
       )}

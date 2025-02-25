@@ -8,11 +8,11 @@
 */
 
 const express = require("express");
-
+const multer = require("multer");
 const { exec } = require("child_process"); // 用于执行 shell 命令
 const fs = require("fs"); // 用于文件操作
 const path = require("path"); // 用于处理文件路径
-
+const upload = multer({ dest: "uploads/" });
 // import models so we can interact with the database
 const User = require("./models/user");
 
@@ -46,57 +46,91 @@ router.post("/initsocket", (req, res) => {
 // |------------------------------|
 // | write your API methods below!|
 // |------------------------------|
-router.post("/parameter", (req, res) => {
-  const { nodeCount } = req.body;
+// 解析PCAP文件的函数
+const parsePcapWithTshark = (filePath) => {
+  return new Promise((resolve, reject) => {
+    // tshark 命令来解析 pcap 文件
+    const tsharkCommand = `tshark -r "${filePath}" -T json -E header=y -e frame.time_relative -e ip.src -e ip.dst -e eth.src -e eth.dst -e frame.len -e frame.protocols`;
 
-  // 校验节点数
-  if (!nodeCount || isNaN(nodeCount) || nodeCount <= 0) {
-    return res.status(400).json({ error: "无效的节点数" });
-  }
+    exec(tsharkCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`TShark 执行错误: ${error}`);
+        return reject(`解析失败: ${stderr}`);
+      }
 
-  // 假设执行 ns-3 脚本来生成 pcap 文件
-  const ns3Command = ` docker exec 5e9 bash -c "cd /workspace/workspace/ns-allinone-3.40/ns-3.40 && ./ns3 run 'scratch/mysecond.cc --nCsma=${nodeCount}'"`;
-  // 执行仿真脚本
-  exec(ns3Command, (err, stdout, stderr) => {
-    if (err) {
-      console.error("仿真失败", stderr);
-      return res.status(500).json({ error: "仿真启动失败" });
-    }
-    // 假设生成的 pcap 文件路径
-    //const pcapFilePath = path.join(VOLUME_PATH, `second-${nodeCount}-0.pcap`);
-    const testFilePath = path.join(
-      "C:",
-      "Users",
-      "Frank Leon",
-      "Desktop",
-      "mybroadcastMAC_example.xml"
-    );
-    // 如果 pcap 文件生成成功
-    if (fs.existsSync(pcapFilePath)) {
-      console.log("测试文件存在，路径:", testFilePath); // 添加日志确认路径
-      res.json({ url: `/downloads/${path.basename(pcapFilePath)}` }); // 返回文件的下载路径
-    } else {
-      console.error("测试文件不存在，路径:", testFilePath);
-      res.status(500).json({ error: "生成 pcap 文件失败" });
-    }
+      try {
+        console.log("JSON 数据:", stdout);
+        const jsonData = JSON.parse(stdout);
+        console.log("JSON 数据:", jsonData);
+        const packets = jsonData.map((record) => ({
+          time: record._source.layers["frame.time_relative"][0], // 注意路径和数组取值
+          len: record._source.layers["frame.len"][0],
+          ip_src: record._source.layers["ip.src"][0],
+          ip_dst: record._source.layers["ip.dst"][0],
+          protocols: record._source.layers["frame.protocols"][0],
+        }));
+
+        resolve(packets);
+      } catch (e) {
+        console.error("JSON 解析错误:", e);
+        reject(new Error("数据格式异常"));
+      }
+    });
   });
+};
+
+router.post("/parameter", async (req, res) => {
+  const { nodeCount } = req.body;
+  // 参数验证
+  if (!nodeCount || nodeCount < 1 || nodeCount > 1000) {
+    return res.status(400).json({ error: "节点数必须在1-1000之间" });
+  }
+  // 定义容器和文件路径
+  const containerId = "4f3f2549c0e564c9b4a83f1a6631f9aa0135098432119ffb1a80ebcffeea0070"; // 设置您的容器 ID
+  const containerPath = `/workspace/workspace/ns-allinone-3.40/ns-3.40/output/second-${nodeCount}-0.pcap`;
+  const localPath = `/mnt/c/Users/Frank\ Leon/Desktop/outpt/second-${nodeCount}-0.pcap`;
+
+  // 执行仿真命令，在特定目录中运行
+  exec(
+    `wsl docker exec -w /workspace/workspace/ns-allinone-3.40/ns-3.40 ${containerId} ./ns3 run "mysecond.cc --nCsma=${nodeCount}"`,
+    (err, stdout, stderr) => {
+      if (err) {
+        console.error("仿真执行错误:", stderr);
+        return res.status(500).json({ error: "仿真执行失败" });
+      }
+
+      // 使用 docker cp 将文件复制到宿主机
+      exec(
+        `wsl docker cp "${containerId}:${containerPath}" "${localPath}"`,
+        (err, stdout, stderr) => {
+          if (err) {
+            console.error("docker cp 错误:", stderr);
+            return res.status(500).json({ error: "文件复制失败" });
+          }
+
+          // 返回生成的 Pcap 文件下载链接
+          const downloadUrl = `http://localhost:3000/downloads/second-${nodeCount}-0.pcap`;
+          console.log("文件下载链接:", downloadUrl);
+          res.json({ downloadUrl: downloadUrl });
+        }
+      );
+    }
+  );
 });
 
-router.get("/downloads/:filename", (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(VOLUME_PATH, filename);
-  // 检查文件是否存在
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "文件不存在" });
-  }
+// 文件上传路由
+router.post("/upload", upload.single("pcap"), async (req, res) => {
+  try {
+    const filePath = req.file.path;
+    const packets = await parsePcapWithTshark(filePath);
 
-  // 设置响应头，触发浏览器下载
-  res.download(filePath, filename, (err) => {
-    if (err) {
-      console.error("文件下载失败", err);
-      res.status(500).json({ error: "文件下载失败" });
-    }
-  });
+    // 删除上传的文件
+    fs.unlinkSync(filePath);
+
+    res.json({ success: true, packets });
+  } catch (error) {
+    res.status(500).json({ error: "解析失败，请检查文件格式" });
+  }
 });
 
 // anything else falls to this "not found" case

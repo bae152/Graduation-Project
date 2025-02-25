@@ -36,14 +36,16 @@ const auth = require("./auth");
 const socketManager = require("./server-socket");
 
 // Server configuration below
-// TODO change connection URL after setting up your team database
+//数据库配置
 const mongoConnectionURL = process.env.MONGO_SRV;
-// TODO change database name to the name you chose
-const databaseName = "FILL_ME_IN";
+//数据库名称
+const databaseName = process.env.DATABASE_NAME;
 
 // mongoose 7 warning
 mongoose.set("strictQuery", false);
-const VOLUME_PATH = "/mnt/docker-desktop-disk/data/docker/volumes/ns3-output/_data"; //临时
+//路径配置
+const VOLUME_PATH = process.env.VOLUME_PATH;
+const WINDOWS_OUTPUT_PATH = process.env.WINDOWS_OUTPUT_PATH;
 // connect to mongodb
 mongoose
   .connect(mongoConnectionURL, {
@@ -57,10 +59,12 @@ mongoose
 // create a new express server
 const app = express();
 app.use(validator.checkRoutes);
-
+//静态文件中间件
+const staticDir = "C:/Users/Frank Leon/Desktop/outpt";
+app.use("/downloads", express.static(staticDir));
 // 解析JSON请求体
 app.use(express.json());
-app.use("/downloads", express.static(VOLUME_PATH));
+//app.use("/downloads", express.static(VOLUME_PATH));
 // set up a session, which will persist login data across requests
 app.use(
   session({
@@ -76,8 +80,6 @@ app.use(auth.populateCurrentUser);
 
 // connect user-defined routes
 app.use("/api", api);
-// 配置静态文件路由（指向 Windows 桌面目录）
-const WINDOWS_OUTPUT_PATH = path.join("C:", "Users", "Frank Leon", "Desktop", "output");
 app.use("/downloads", express.static(WINDOWS_OUTPUT_PATH));
 // load the compiled react files, which will serve /index.html and /bundle.js
 const reactPath = path.resolve(__dirname, "..", "client", "dist");
@@ -105,7 +107,7 @@ app.use((err, req, res, next) => {
 });
 
 // hardcode port to 3000 for now
-const port = 3000;
+const port = process.env.PORT || 3000;
 const server = http.Server(app);
 socketManager.init(server);
 
