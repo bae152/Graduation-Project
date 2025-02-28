@@ -118,6 +118,71 @@ router.post("/parameter", async (req, res) => {
   );
 });
 
+// 日志解析函数
+const parseLogFile = (fileBuffer) => {
+  const logContent = fileBuffer.toString();
+  const timeline = [];
+
+  // 正则表达式优化版
+  const logRegex =
+    /^([tr])\s+([\d.]+).*?SenderAddr=(\d+).*?DestAddr=(\d+).*?OriginalSource=([\d,]+)/gm;
+
+  let match;
+  while ((match = logRegex.exec(logContent)) !== null) {
+    const [_, eventType, timestampStr, sender, receiver, coordsStr] = match;
+
+    timeline.push({
+      type: eventType === "t" ? "transmit" : "receive",
+      timestamp: parseFloat(timestampStr),
+      senderId: sender.padStart(4, "0"), // 补齐节点ID为4位
+      receiverId: receiver.padStart(4, "0"),
+      coords: coordsStr.split(",").map(Number),
+    });
+  }
+
+  return timeline.sort((a, b) => a.timestamp - b.timestamp);
+};
+
+// 日志上传接口
+router.post("/logUpload", multer().single("txt"), async (req, res) => {
+  try {
+    // 验证文件存在
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: "未收到日志文件",
+      });
+    }
+
+    // 解析日志
+    const timeline = parseLogFile(req.file.buffer);
+
+    // 验证解析结果
+    if (timeline.length === 0) {
+      return res.status(422).json({
+        success: false,
+        error: "未发现有效日志数据",
+      });
+    }
+
+    res.json({
+      success: true,
+      timeline,
+      stats: {
+        startTime: timeline[0].timestamp,
+        endTime: timeline[timeline.length - 1].timestamp,
+        totalEvents: timeline.length,
+      },
+    });
+  } catch (error) {
+    console.error("日志解析失败:", error);
+    res.status(500).json({
+      success: false,
+      error: `日志解析失败: ${error.message}`,
+    });
+  }
+});
+
 // 文件上传路由
 router.post("/upload", upload.single("pcap"), async (req, res) => {
   try {

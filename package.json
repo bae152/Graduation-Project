@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.6.0",
+    "@react-three/drei": "^9.94.0",
+    "@react-three/fiber": "^8.14.5",
     "child_process": "^1.0.2",
     "connect-ensure-login": "^0.1.1",
     "core-js": "^3.27.2",
@@ -37,6 +39,7 @@
     "react-treebeard": "^3.2.4",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.1",
+    "three": "^0.150.0",
     "url-loader": "^4.1.1"
   },
   "devDependencies": {
