@@ -1,0 +1,23 @@
+/* 外层容器：让标题在上方，输入框们在下一行 */
+.coordinate-container {
+  display: flex;
+  flex-direction: column; /* 垂直排列 */
+  margin-bottom: 1rem; /* 与后面内容的间距 */
+}
+
+.coordinate-label {
+  margin-bottom: 0.5rem; /* 标题与输入框行之间的间距 */
+}
+
+/* 让 X, Y, Z 三个 InputField 并排显示，并设置间距 */
+.coordinate-fields {
+  display: flex;
+  gap: 2rem; /* X, Y, Z 之间的水平间隔，可自行调整 */
+}
+/* Labels and error messages */
+.form-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #8d6d6a; /* match the heading color for consistency */
+}

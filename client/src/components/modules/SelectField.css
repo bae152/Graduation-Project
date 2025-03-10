@@ -1,0 +1,9 @@
+.select-field {
+  display: flex; /* 让 label 和 select 水平排列 */
+  align-items: center; /* 垂直居中 */
+  margin-bottom: 0.5rem; /* 与下方内容的间距，可根据需要调整 */
+}
+
+.select-field-label {
+  margin-right: 0.5rem; /* label 和 select 之间留点间距 */
+}

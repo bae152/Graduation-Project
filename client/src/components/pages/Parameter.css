@@ -1,0 +1,65 @@
+/* Parameter.css */
+
+/* Outer container to mimic the navbar’s background and style */
+.parameter-container {
+  background-color: #f8f2ef; /* or whatever color your navbar uses */
+  width: 40%;
+  margin: 20px auto; /* centers the container and adds top/bottom spacing */
+  padding: 20px;
+  border: 1px solid #ddd; /* subtle border */
+  border-radius: 8px;
+  font-family: "Microsoft YaHei", sans-serif; /* example font; adjust as needed */
+}
+
+/* Optional heading style to match navbar text color */
+.parameter-header {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #8d6d6a; /* a soft brown/pink tone to match the navbar text */
+  margin-bottom: 20px;
+}
+
+/* Generic form field spacing */
+.form-field {
+  margin-bottom: 15px;
+}
+
+/* Labels and error messages */
+.form-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #8d6d6a; /* match the heading color for consistency */
+}
+
+.error-message {
+  color: #e74c3c; /* or red, for errors */
+  margin-top: 5px;
+  font-size: 0.9rem;
+}
+
+/* Inputs, selects, text fields, etc. */
+.form-field input,
+.form-field select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+/* Submit button styling */
+.submit-button {
+  background-color: #c8a79e; /* slightly darker than background to stand out */
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  margin-top: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.submit-button:hover {
+  background-color: #b4958d; /* darker hover color */
+}

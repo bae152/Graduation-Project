@@ -1,0 +1,9 @@
+.input-field {
+  display: flex; /* 让 label 和 input 在同一行 */
+  align-items: center; /* 垂直方向居中对齐 */
+  margin-bottom: 0.5rem; /* 控制与下方元素的间距，可根据需求调整 */
+}
+
+.input-field label {
+  margin-right: 0.5rem; /* label 与 input 之间的水平间距 */
+}

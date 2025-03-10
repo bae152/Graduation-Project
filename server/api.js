@@ -16,6 +16,13 @@ const upload = multer({ dest: "uploads/" });
 // import models so we can interact with the database
 const User = require("./models/user");
 
+const {
+  parsePcapWithTshark,
+  parseNode,
+  parseLogFile,
+  parsePacketsByNode,
+} = require("./models/parve");
+const { commandGenerator } = require("./models/commandGenerator");
 // import authentication library
 const auth = require("./auth");
 
@@ -46,38 +53,6 @@ router.post("/initsocket", (req, res) => {
 // |------------------------------|
 // | write your API methods below!|
 // |------------------------------|
-// 解析PCAP文件的函数
-const parsePcapWithTshark = (filePath) => {
-  return new Promise((resolve, reject) => {
-    // tshark 命令来解析 pcap 文件
-    const tsharkCommand = `tshark -r "${filePath}" -T json -E header=y -e frame.time_relative -e ip.src -e ip.dst -e eth.src -e eth.dst -e frame.len -e frame.protocols`;
-
-    exec(tsharkCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`TShark 执行错误: ${error}`);
-        return reject(`解析失败: ${stderr}`);
-      }
-
-      try {
-        console.log("JSON 数据:", stdout);
-        const jsonData = JSON.parse(stdout);
-        console.log("JSON 数据:", jsonData);
-        const packets = jsonData.map((record) => ({
-          time: record._source.layers["frame.time_relative"][0], // 注意路径和数组取值
-          len: record._source.layers["frame.len"][0],
-          ip_src: record._source.layers["ip.src"][0],
-          ip_dst: record._source.layers["ip.dst"][0],
-          protocols: record._source.layers["frame.protocols"][0],
-        }));
-
-        resolve(packets);
-      } catch (e) {
-        console.error("JSON 解析错误:", e);
-        reject(new Error("数据格式异常"));
-      }
-    });
-  });
-};
 
 router.post("/parameter", async (req, res) => {
   const { nodeCount } = req.body;
@@ -86,7 +61,6 @@ router.post("/parameter", async (req, res) => {
     return res.status(400).json({ error: "节点数必须在1-1000之间" });
   }
   // 定义容器和文件路径
-  const containerId = "4f3f2549c0e564c9b4a83f1a6631f9aa0135098432119ffb1a80ebcffeea0070"; // 设置您的容器 ID
   const containerPath = `/workspace/workspace/ns-allinone-3.40/ns-3.40/output/second-${nodeCount}-0.pcap`;
   const localPath = `/mnt/c/Users/Frank\ Leon/Desktop/outpt/second-${nodeCount}-0.pcap`;
 
@@ -117,31 +91,6 @@ router.post("/parameter", async (req, res) => {
     }
   );
 });
-
-// 日志解析函数
-const parseLogFile = (fileBuffer) => {
-  const logContent = fileBuffer.toString();
-  const timeline = [];
-
-  // 正则表达式优化版
-  const logRegex =
-    /^([tr])\s+([\d.]+).*?SenderAddr=(\d+).*?DestAddr=(\d+).*?OriginalSource=([\d,]+)/gm;
-
-  let match;
-  while ((match = logRegex.exec(logContent)) !== null) {
-    const [_, eventType, timestampStr, sender, receiver, coordsStr] = match;
-
-    timeline.push({
-      type: eventType === "t" ? "transmit" : "receive",
-      timestamp: parseFloat(timestampStr),
-      senderId: sender.padStart(4, "0"), // 补齐节点ID为4位
-      receiverId: receiver.padStart(4, "0"),
-      coords: coordsStr.split(",").map(Number),
-    });
-  }
-
-  return timeline.sort((a, b) => a.timestamp - b.timestamp);
-};
 
 // 日志上传接口
 router.post("/logUpload", multer().single("txt"), async (req, res) => {
@@ -183,25 +132,83 @@ router.post("/logUpload", multer().single("txt"), async (req, res) => {
   }
 });
 
-// 文件上传路由
-router.post("/upload", upload.single("pcap"), async (req, res) => {
+router.post(
+  "/upload",
+  upload.fields([
+    { name: "pcap", maxCount: 1 },
+    { name: "node", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const { pcap, node } = req.files;
+      if (pcap) {
+        const packets = await parsePcapWithTshark(pcap[0].path);
+        fs.unlinkSync(pcap[0].path);
+        return res.json({ success: true, type: "pcap", data: packets });
+      }
+      if (node) {
+        const nodeData = await parseNode(node[0].path);
+        fs.unlinkSync(node[0].path);
+        return res.json({ success: true, type: "node", data: nodeData });
+      }
+    } catch (error) {
+      console.error("文件上传失败:", error);
+      res.status(500).json({ error: error.message || "文件处理失败" });
+    }
+  }
+);
+
+router.get("/parseAll", async (req, res) => {
   try {
-    const filePath = req.file.path;
-    const packets = await parsePcapWithTshark(filePath);
-
-    // 删除上传的文件
-    fs.unlinkSync(filePath);
-
-    res.json({ success: true, packets });
+    // 从路径参数获取节点ID
+    const logFilePath = path.join(process.env.WINDOWS_OUTPUT_PATH, "log.txt");
+    const nodeFilePath = path.join(process.env.WINDOWS_OUTPUT_PATH, "nodes.txt");
+    const logData = await parseLogFile(logFilePath);
+    const nodeData = await parseNode(nodeFilePath);
+    return res.json({ success: true, type: "data", nodeData: nodeData, logData: logData });
   } catch (error) {
-    res.status(500).json({ error: "解析失败，请检查文件格式" });
+    console.error("Error parsing All:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// anything else falls to this "not found" case
-router.all("*", (req, res) => {
-  console.log(`API route not found: ${req.method} ${req.url}`);
-  res.status(404).send({ msg: "API route not found" });
+router.post("/submitForm", (req, res) => {
+  const formData = req.body;
+  console.log("接收到的表单数据:", formData);
+  const conmand = commandGenerator(formData);
+  console.log("生成的命令:", conmand);
+  // 执行命令
+  exec(conmand, (error, stdout, stderr) => {
+    if (error) {
+      console.error("命令执行失败:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: "命令执行失败",
+        error: error.message,
+        stderr: stderr,
+      });
+    }
+
+    // 命令执行成功
+    console.log("命令输出:", stdout);
+    res.json({
+      success: true,
+      message: "命令执行成功",
+      output: stdout,
+    });
+  });
+});
+router.get("/nodes/:nodeId/packets", async (req, res) => {
+  const filePath = path.join("C:/Users/Frank Leon/Desktop/outpt/log.txt");
+  try {
+    // 从路径参数获取节点ID
+    const nodeId = req.params.nodeId;
+    const packets = await parsePacketsByNode(filePath, nodeId);
+    res.json({ packets });
+  } catch (error) {
+    console.error("Error parsing packets:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

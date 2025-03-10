@@ -1,12 +1,10 @@
 /* Data.css */
 
 .data-container {
-  width: 80%;
-  margin: 20px auto;
-  padding: 20px;
-  background-color: #f4f4f9;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%; /* 修改容器宽度 */
+  margin: 20px; /* 去掉auto实现并排 */
+  float: left; /* 新增浮动布局 */
+  box-sizing: border-box; /* 防止padding影响宽度 */
 }
 
 h1 {
@@ -19,6 +17,11 @@ h1 {
   margin-bottom: 20px;
 }
 
+.table-container {
+  max-height: 70vh; /* 改用视口单位 */
+  width: 100%; /* 继承父容器宽度 */
+  /* 其他滚动条样式保持不变 */
+}
 .file-input {
   margin-bottom: 10px;
 }
@@ -44,10 +47,18 @@ h1 {
   flex-direction: column;
 }
 
+/* 表格容器样式 */
+.table-container {
+  max-height: 300px; /* 设置表格的最大高度 */
+  overflow-y: auto; /* 启用垂直滚动条 */
+  margin-top: 20px;
+  border: 1px solid #ddd; /* 添加边框 */
+  border-radius: 4px; /* 添加圆角 */
+}
+
 .packet-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
 }
 
 .packet-table th,
@@ -59,6 +70,9 @@ h1 {
 
 .packet-table th {
   background-color: #f2f2f2;
+  position: sticky; /* 固定表头 */
+  top: 0; /* 固定在顶部 */
+  z-index: 1; /* 确保表头在内容上方 */
 }
 
 .packet-table tr:nth-child(even) {
@@ -67,6 +81,11 @@ h1 {
 
 .packet-table tr:hover {
   background-color: #f1f1f1;
+}
+
+/* 选中行样式 */
+.selected-row {
+  background-color: #e2f0ff !important; /* 选中行高亮 */
 }
 
 .no-data {
@@ -107,4 +126,38 @@ h1 {
 
 .rst__rowToggle {
   color: #3498db;
+}
+
+/* 自定义滚动条样式 */
+.table-container::-webkit-scrollbar {
+  width: 8px; /* 滚动条宽度 */
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f1f1; /* 滚动条轨道背景 */
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #888; /* 滚动条滑块颜色 */
+  border-radius: 4px; /* 滑块圆角 */
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #555; /* 鼠标悬停时滑块颜色 */
+}
+/* Data.css */
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.node-title {
+  font-weight: 600;
+  color: #333;
+}
+
+.node-value {
+  color: #666;
+  margin-left: 20px;
 }

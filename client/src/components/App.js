@@ -23,6 +23,8 @@ import Login from "./pages/Login.js";
  */
 const App = () => {
   const [userId, setUserId] = useState(undefined);
+  const [nodeId, setNodeId] = useState(undefined);
+  const [giveDataRate, setGiveDataRate] = useState(undefined);
 
   useEffect(() => {
     get("/api/whoami").then((user) => {
@@ -36,12 +38,10 @@ const App = () => {
   const handleLogin = (credentialResponse) => {
     const userToken = credentialResponse.credential;
     const decodedCredential = jwt_decode(userToken);
-    console.log(`Logged in as ${decodedCredential.name}`);
     post("/api/login", { token: userToken }).then((user) => {
       setUserId(user._id);
       post("/api/initsocket", { socketid: socket.id });
     });
-    console.log(userToken);
   };
 
   const handleLogout = () => {
@@ -54,9 +54,12 @@ const App = () => {
       <NavBar handleLogin={handleLogin} handleLogout={handleLogout} userId={userId} />
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/simulation/" element={<Simulation />} />
-        <Route path="/data/" element={<Data />} />
-        <Route path="/parameter/" element={<Parameter />} />
+        <Route
+          path="/simulation/"
+          element={<Simulation setNodeId={setNodeId} giveDataRate={giveDataRate} />}
+        />
+        <Route path="/data/" element={<Data nodeId={nodeId} />} />
+        <Route path="/parameter/" element={<Parameter setGiveDataRate={setGiveDataRate} />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
